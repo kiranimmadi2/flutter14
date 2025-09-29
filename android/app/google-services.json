@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1027499426345",
+    "project_id": "suuper2",
+    "storage_bucket": "suuper2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1027499426345:android:1b44360b28008567375238",
+        "android_client_info": {
+          "package_name": "com.plink.supper"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCr0I1xu3pMGTB7ngUvs0jtZc5uqnI8I8w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

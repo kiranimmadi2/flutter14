@@ -1,0 +1,91 @@
+// Firestore Security Rules for Intent-Based Matching System
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection - allow authenticated users to read public profiles and write their own
+    match /users/{userId} {
+      // Allow authenticated users to read public profile fields
+      allow read: if request.auth != null;
+
+      // Allow users to write/update only their own profile
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // User intents collection - core matching data
+    match /user_intents/{intentId} {
+      // Allow authenticated users to read active intents (for matching)
+      allow read: if request.auth != null
+                  && resource.data.status == 'active'
+                  && resource.data.expiresAt > request.time;
+
+      // Allow users to create new intents
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId
+                    && request.resource.data.keys().hasAll([
+                      'userId', 'originalText', 'intent', 'target_intent',
+                      'category', 'description', 'embedding', 'status'
+                    ]);
+
+      // Allow users to update only their own intents
+      allow update: if request.auth != null
+                    && request.auth.uid == resource.data.userId
+                    && request.auth.uid == request.resource.data.userId;
+
+      // Allow users to delete only their own intents
+      allow delete: if request.auth != null
+                    && request.auth.uid == resource.data.userId;
+    }
+
+    // Processed intents collection (for analytics/debugging)
+    match /processed_intents/{intentId} {
+      // Only allow reading/writing by the user who created it
+      allow read, write: if request.auth != null
+                         && request.auth.uid == resource.data.userId;
+
+      // Allow creating new processed intents
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.userId;
+    }
+
+    // Chat/messaging collections (if they exist)
+    match /chats/{chatId} {
+      // Allow read/write for participants only
+      allow read, write: if request.auth != null
+                         && request.auth.uid in resource.data.participants;
+    }
+
+    match /messages/{messageId} {
+      // Allow read for chat participants
+      allow read: if request.auth != null;
+
+      // Allow create for authenticated users
+      allow create: if request.auth != null
+                    && request.auth.uid == request.resource.data.senderId;
+    }
+
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
+// Additional indexes needed for optimal performance:
+//
+// Composite Indexes Required:
+// 1. Collection: user_intents
+//    Fields: intent (Ascending), status (Ascending), expiresAt (Ascending)
+//
+// 2. Collection: user_intents
+//    Fields: userId (Ascending), status (Ascending), createdAt (Descending)
+//
+// 3. Collection: user_intents
+//    Fields: category (Ascending), intent (Ascending), status (Ascending)
+//
+// Single Field Indexes:
+// - user_intents.embedding (for vector similarity - if using Firestore vector search)
+// - user_intents.similarity (Descending)
+// - user_intents.createdAt (Descending)
+// - user_intents.updatedAt (Descending)
